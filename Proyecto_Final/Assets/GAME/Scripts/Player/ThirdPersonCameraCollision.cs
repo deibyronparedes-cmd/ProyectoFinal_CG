@@ -1,64 +1,75 @@
 using UnityEngine;
 
-[DefaultExecutionOrder(100)]
 public class ThirdPersonCameraCollision : MonoBehaviour
 {
-    [Header("Referencia del jugador")]
-    [SerializeField] private Transform target;
-
-    [Header("Configuracion de camara")]
-    [SerializeField] private float targetHeight = 1.4f;
+    [Header("Deteccion de obstaculos")]
     [SerializeField] private float sphereRadius = 0.25f;
     [SerializeField] private float wallPadding = 0.15f;
-
-    [Header("Deteccion de obstaculos")]
     [SerializeField] private LayerMask collisionMask = ~0;
 
     private void Awake()
     {
         int playerLayer = LayerMask.NameToLayer("Player");
-
         if (playerLayer >= 0)
-        {
             collisionMask &= ~(1 << playerLayer);
-        }
     }
 
-    private void LateUpdate()
+    public Vector3 ResolvePosition(
+        Transform target,
+        Vector3 pivot,
+        Vector3 desiredPosition,
+        out bool obstructed)
     {
-        if (target == null)
-            return;
+        obstructed = false;
 
-        Vector3 pivot =
-            target.position + Vector3.up * targetHeight;
+        Vector3 offset = desiredPosition - pivot;
+        float desiredDistance = offset.magnitude;
 
-        Vector3 cameraPosition = transform.position;
+        if (desiredDistance <= 0.01f)
+            return desiredPosition;
 
-        Vector3 direction = cameraPosition - pivot;
+        Vector3 direction = offset / desiredDistance;
 
-        float distance = direction.magnitude;
-
-        if (distance <= 0.01f)
-            return;
-
-        direction.Normalize();
-
-        if (Physics.SphereCast(
+        RaycastHit[] hits = Physics.SphereCastAll(
             pivot,
             sphereRadius,
             direction,
-            out RaycastHit hit,
-            distance,
+            desiredDistance,
             collisionMask,
-            QueryTriggerInteraction.Ignore))
-        {
-            float safeDistance = Mathf.Max(
-                0.25f,
-                hit.distance - wallPadding
-            );
+            QueryTriggerInteraction.Ignore
+        );
 
-            transform.position =
-                pivot + direction * safeDistance;
+        float nearestDistance = desiredDistance;
+        bool foundObstacle = false;
+
+        foreach (RaycastHit hit in hits)
+        {
+            Transform hitTransform = hit.collider.transform;
+
+            if (target != null &&
+                (hitTransform == target || hitTransform.IsChildOf(target)))
+            {
+                continue;
+            }
+
+            if (hit.distance >= 0f && hit.distance < nearestDistance)
+            {
+                nearestDistance = hit.distance;
+                foundObstacle = true;
+            }
         }
+
+        if (!foundObstacle)
+            return desiredPosition;
+
+        obstructed = true;
+
+        float safeDistance = Mathf.Clamp(
+            nearestDistance - wallPadding,
+            0.2f,
+            desiredDistance
+        );
+
+        return pivot + direction * safeDistance;
     }
 }

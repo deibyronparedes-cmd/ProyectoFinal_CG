@@ -9,22 +9,37 @@ public class ThirdPersonCamera : MonoBehaviour
     [SerializeField] private float distance = 4.5f;
     [SerializeField] private float targetHeight = 1.4f;
 
-    [Header("Rotacion")]
+    [Header("Rotacion de camara")]
     [SerializeField] private float mouseSensitivity = 2.5f;
+    [SerializeField] private float initialPitch = 12f;
     [SerializeField] private float minPitch = -15f;
-    [SerializeField] private float maxPitch = 65f;
+    [SerializeField] private float maxPitch = 60f;
 
     [Header("Suavizado")]
-    [SerializeField] private float smoothSpeed = 12f;
+    [SerializeField] private float smoothTime = 0.06f;
 
     private float yaw;
-    private float pitch = 15f;
+    private float pitch;
+    private Vector3 smoothVelocity;
+    private ThirdPersonCameraCollision collisionResolver;
+    private bool initialized;
+
+    private void Awake()
+    {
+        collisionResolver = GetComponent<ThirdPersonCameraCollision>();
+    }
 
     private void Start()
     {
-        if (target != null)
-            yaw = target.eulerAngles.y;
+        if (target == null)
+        {
+            Debug.LogError("ThirdPersonCamera: falta asignar el Player en Target.");
+            enabled = false;
+            return;
+        }
 
+        yaw = target.eulerAngles.y;
+        pitch = Mathf.Clamp(initialPitch, minPitch, maxPitch);
         LockCursor();
     }
 
@@ -37,31 +52,49 @@ public class ThirdPersonCamera : MonoBehaviour
 
         if (Cursor.lockState == CursorLockMode.Locked)
         {
-            yaw += Input.GetAxis("Mouse X") * mouseSensitivity;
-            pitch -= Input.GetAxis("Mouse Y") * mouseSensitivity;
-
+            yaw += Input.GetAxisRaw("Mouse X") * mouseSensitivity;
+            pitch -= Input.GetAxisRaw("Mouse Y") * mouseSensitivity;
             pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
         }
 
-        Vector3 pivot = target.position +
-                        Vector3.up * targetHeight;
+        target.rotation = Quaternion.Euler(0f, yaw, 0f);
 
-        Quaternion rotation = Quaternion.Euler(pitch, yaw, 0f);
+        Vector3 pivot = target.position + Vector3.up * targetHeight;
+        Quaternion orbitRotation = Quaternion.Euler(pitch, yaw, 0f);
+        Vector3 desiredPosition = pivot + orbitRotation * Vector3.back * distance;
 
-        Vector3 offset = rotation *
-                         new Vector3(0f, 0f, -distance);
-
-        Vector3 desiredPosition = pivot + offset;
-
-        transform.position = Vector3.Lerp(
+        Vector3 smoothedPosition = Vector3.SmoothDamp(
             transform.position,
             desiredPosition,
-            smoothSpeed * Time.deltaTime
+            ref smoothVelocity,
+            smoothTime
         );
 
-        transform.rotation = Quaternion.LookRotation(
-            pivot - transform.position
-        );
+        if (collisionResolver != null)
+        {
+            transform.position = collisionResolver.ResolvePosition(
+                target,
+                pivot,
+                smoothedPosition,
+                out bool obstructed
+            );
+
+            if (obstructed)
+                smoothVelocity = Vector3.zero;
+        }
+        else
+        {
+            transform.position = smoothedPosition;
+        }
+
+        Vector3 lookDirection = pivot - transform.position;
+        if (lookDirection.sqrMagnitude > 0.0001f)
+        {
+            transform.rotation = Quaternion.LookRotation(
+                lookDirection,
+                Vector3.up
+            );
+        }
     }
 
     private void HandleCursor()
