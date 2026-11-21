@@ -7,31 +7,24 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private float runSpeed = 8f;
     [SerializeField] private float gravity = -20f;
-    [SerializeField] private float turnSpeed = 12f;
 
     [Header("Camara")]
     [SerializeField] private Transform cameraTransform;
 
     private CharacterController controller;
     private Animator animator;
-
     private float verticalVelocity;
 
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
-
         animator = GetComponentInChildren<Animator>();
 
         if (cameraTransform == null && Camera.main != null)
-        {
             cameraTransform = Camera.main.transform;
-        }
 
         if (animator == null)
-        {
             Debug.LogWarning("No se encontro el Animator del personaje.");
-        }
     }
 
     private void Update()
@@ -41,9 +34,6 @@ public class PlayerController : MonoBehaviour
 
     private void HandleMovement()
     {
-        if (cameraTransform == null)
-            return;
-
         float horizontal = 0f;
         float vertical = 0f;
 
@@ -53,41 +43,33 @@ public class PlayerController : MonoBehaviour
             vertical = Input.GetAxisRaw("Vertical");
         }
 
-        Vector3 forward = cameraTransform.forward;
-        Vector3 right = cameraTransform.right;
+        Vector3 forward = cameraTransform != null
+            ? cameraTransform.forward
+            : transform.forward;
+
+        Vector3 right = cameraTransform != null
+            ? cameraTransform.right
+            : transform.right;
 
         forward.y = 0f;
         right.y = 0f;
 
-        forward.Normalize();
-        right.Normalize();
+        if (forward.sqrMagnitude > 0.001f)
+            forward.Normalize();
 
-        Vector3 direction =
-            forward * vertical + right * horizontal;
+        if (right.sqrMagnitude > 0.001f)
+            right.Normalize();
 
+        Vector3 direction = forward * vertical + right * horizontal;
         direction = Vector3.ClampMagnitude(direction, 1f);
 
         bool isMoving = direction.sqrMagnitude > 0.01f;
-
         bool isRunning = isMoving &&
             (Input.GetKey(KeyCode.LeftShift) ||
              Input.GetKey(KeyCode.RightShift));
 
         float currentSpeed = isRunning ? runSpeed : moveSpeed;
 
-        if (isMoving)
-        {
-            Quaternion targetRotation =
-                Quaternion.LookRotation(direction);
-
-            transform.rotation = Quaternion.Slerp(
-                transform.rotation,
-                targetRotation,
-                turnSpeed * Time.deltaTime
-            );
-        }
-
-        // Actualizar las animaciones
         if (animator != null)
         {
             float animationSpeed = 0f;
@@ -103,11 +85,9 @@ public class PlayerController : MonoBehaviour
             );
         }
 
-        // Gravedad
+
         if (controller.isGrounded && verticalVelocity < 0f)
-        {
             verticalVelocity = -2f;
-        }
 
         verticalVelocity += gravity * Time.deltaTime;
 
