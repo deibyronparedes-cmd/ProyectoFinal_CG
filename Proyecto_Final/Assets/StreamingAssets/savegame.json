@@ -1,0 +1,13 @@
+{
+    "sceneName": "Laboratorio",
+    "currentHealth": 40,
+    "inventory": [
+        "KEYCARD_RECEPCION"
+    ],
+    "terminals": [
+        {
+            "terminalId": "TERMINAL_RECEPCION",
+            "activated": true
+        }
+    ]
+}
