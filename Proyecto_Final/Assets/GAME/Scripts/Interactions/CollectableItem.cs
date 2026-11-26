@@ -7,6 +7,17 @@ public class CollectableItem : Interactable
 
     private bool collected = false;
 
+    private void Start()
+    {
+        // Si el objeto ya estaba guardado en el inventario,
+        // no debe volver a aparecer al cargar la escena.
+        if (GameManager.Instance != null && GameManager.Instance.HasItem(itemId))
+        {
+            collected = true;
+            gameObject.SetActive(false);
+        }
+    }
+
     public override void Interact()
     {
         if (collected)
@@ -21,18 +32,14 @@ public class CollectableItem : Interactable
         if (GameManager.Instance.AddItem(itemId))
         {
             base.Interact();
-
             collected = true;
 
             Debug.Log("Tarjeta de acceso recogida.");
 
             UIManager ui = FindFirstObjectByType<UIManager>();
-
             if (ui != null)
             {
-                ui.SetObjective(
-                    "Activa el terminal de seguridad."
-                );
+                ui.SetObjective("Activa el terminal de seguridad.");
             }
 
             gameObject.SetActive(false);

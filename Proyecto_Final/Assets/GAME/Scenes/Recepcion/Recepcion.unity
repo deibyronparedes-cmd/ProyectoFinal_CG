@@ -5866,6 +5866,7 @@ MonoBehaviour:
   mouseSensitivity: 2
   minPitch: -10
   maxPitch: 35
+  uiManager: {fileID: 4215179741821585179}
 --- !u!143 &1614186875
 CharacterController:
   m_ObjectHideFlags: 0
@@ -8519,6 +8520,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 34105372c2836a94f92e8921e11cef9d, type: 3}
+--- !u!114 &4215179741821585179 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3892798029875189070, guid: 34105372c2836a94f92e8921e11cef9d, type: 3}
+  m_PrefabInstance: {fileID: 4215179741821585178}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 163a731a5b39ae242a1f9a9e2a9b9cac, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIManager
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
