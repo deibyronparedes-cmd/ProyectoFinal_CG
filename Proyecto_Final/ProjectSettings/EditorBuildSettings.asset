@@ -18,7 +18,7 @@ EditorBuildSettings:
     path: Assets/GAME/Scenes/Laboratorio/Laboratorio.unity
     guid: 06bb2c4ee927fa04195817408243180b
   - enabled: 1
-    path: Assets/GAME/Scenes/SalaControl.unity
+    path: Assets/GAME/Scenes/SalaControl/SalaControl.unity
     guid: 790a6daae73019a4ba64673ad2bc4d86
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
