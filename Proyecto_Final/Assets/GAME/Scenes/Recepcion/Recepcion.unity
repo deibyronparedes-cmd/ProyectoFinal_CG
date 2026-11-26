@@ -3973,7 +3973,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CollectableItem
   objectName: Objeto interactivo
   interactionMessage: Has interactuado con este objeto.
-  interactionSound: {fileID: 0}
+  interactionPrompt: '[E] RECOGER TARJETA DE ACCESO'
+  enableHighlight: 1
+  highlightColor: {r: 0.18, g: 0.85, b: 1, a: 1}
+  highlightTintStrength: 0.45
+  usePointLight: 1
+  highlightLightIntensity: 1.2
+  highlightLightRange: 2.2
+  interactionSound: {fileID: 8300000, guid: 2609eeeadb5a5df40aaebfac9cf12b92, type: 3}
   soundVolume: 1
   itemId: KEYCARD_RECEPCION
 --- !u!1001 &1346020950
@@ -5015,10 +5022,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SecurityTerminal
   objectName: "Terminal de recepci\xF3n"
   interactionMessage: Credenciales verificadas. Acceso autorizado.
-  interactionSound: {fileID: 0}
+  interactionPrompt: '[E] INTERACTUAR'
+  enableHighlight: 1
+  highlightColor: {r: 0.18, g: 0.85, b: 1, a: 1}
+  highlightTintStrength: 0.48
+  usePointLight: 1
+  highlightLightIntensity: 1.2
+  highlightLightRange: 2.2
+  interactionSound: {fileID: 8300000, guid: 391ee1ef33f9a704a8128adc3417f617, type: 3}
   soundVolume: 1
   terminalId: TERMINAL_RECEPCION
   requiredItemId: KEYCARD_RECEPCION
+  deniedSound: {fileID: 0}
+  deniedSoundVolume: 1
 --- !u!1 &1532192363
 GameObject:
   m_ObjectHideFlags: 0
@@ -5964,6 +5980,7 @@ MonoBehaviour:
   player: {fileID: 1614186873}
   playerCamera: {fileID: 202404687}
   interactionDistance: 2
+  uiManager: {fileID: 0}
 --- !u!114 &1614186879
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6156,13 +6173,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DoorAccess
   objectName: Puerta principal
   interactionMessage: Acceso autorizado
-  interactionSound: {fileID: 0}
+  interactionPrompt: '[E] INTERACTUAR'
+  enableHighlight: 1
+  highlightColor: {r: 0.18, g: 0.85, b: 1, a: 1}
+  highlightTintStrength: 0.48
+  usePointLight: 1
+  highlightLightIntensity: 1.2
+  highlightLightRange: 2.2
+  interactionSound: {fileID: 8300000, guid: a16776007afc54b48ab79e26f25466cb, type: 3}
   soundVolume: 1
   requiredItemId: KEYCARD_RECEPCION
   requiredTerminalId: TERMINAL_RECEPCION
   openingAngle: 90
   openingDuration: 1.2
-  deniedSound: {fileID: 0}
+  deniedSound: {fileID: 8300000, guid: aba6d7f3ac792764e96118aa801d77cd, type: 3}
+  deniedSoundVolume: 1
 --- !u!65 &1640947016
 BoxCollider:
   m_ObjectHideFlags: 0

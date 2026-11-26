@@ -54,12 +54,23 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        // TAB solo funciona durante la partida, no en el menu principal.
-        if (uiManager != null && Input.GetKeyDown(KeyCode.Tab))
-            uiManager.ToggleInventory();
+        if (uiManager == null)
+            uiManager = FindFirstObjectByType<UIManager>();
 
-        // Mientras el inventario esta abierto, el cursor queda libre,
-        // no se mueve la camara y el jugador no puede caminar.
+     
+        if (uiManager != null && uiManager.IsEndPanelOpen)
+            return;
+
+   
+        if (uiManager != null && uiManager.IsPauseOpen)
+        {
+            if (Input.GetKeyDown(KeyCode.Escape))
+                uiManager.ResumeGame();
+
+            return;
+        }
+
+        
         if (uiManager != null && uiManager.IsInventoryOpen)
         {
             if (Input.GetKeyDown(KeyCode.Escape))
@@ -68,11 +79,24 @@ public class PlayerController : MonoBehaviour
                 return;
             }
 
-            HandleMovement(); // Mantiene la gravedad; sin cursor bloqueado no hay movimiento horizontal.
-            return;           // Evita que un clic sobre un slot vuelva a bloquear el cursor.
+            HandleMovement(); 
+            return;
         }
 
-        HandleCursor();
+  
+        if (uiManager != null && Input.GetKeyDown(KeyCode.Escape))
+        {
+            uiManager.OpenPause();
+            return;
+        }
+
+        if (uiManager != null && Input.GetKeyDown(KeyCode.Tab))
+        {
+            uiManager.ToggleInventory();
+            return;
+        }
+
+        HandleCursorOnClick();
 
         if (Cursor.lockState == CursorLockMode.Locked)
             HandleCameraRotation();
@@ -101,7 +125,7 @@ public class PlayerController : MonoBehaviour
         float horizontal = 0f;
         float vertical = 0f;
 
-        if (Cursor.lockState == CursorLockMode.Locked)
+        if (Cursor.lockState == CursorLockMode.Locked && Time.timeScale > 0f)
         {
             horizontal = Input.GetAxisRaw("Horizontal");
             vertical = Input.GetAxisRaw("Vertical");
@@ -132,14 +156,8 @@ public class PlayerController : MonoBehaviour
         controller.Move(movement * Time.deltaTime);
     }
 
-    private void HandleCursor()
+    private void HandleCursorOnClick()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            UnlockCursor();
-            return;
-        }
-
         if (Cursor.lockState != CursorLockMode.Locked && Input.GetMouseButtonDown(0))
             LockCursor();
     }
@@ -148,11 +166,5 @@ public class PlayerController : MonoBehaviour
     {
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
-    }
-
-    private void UnlockCursor()
-    {
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
     }
 }

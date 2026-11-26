@@ -2,6 +2,8 @@ using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Events;
+using UnityEngine.SceneManagement;
 
 [Serializable]
 public class InventoryItemDefinition
@@ -22,6 +24,10 @@ public class UIManager : MonoBehaviour
     [Header("Barra de vida")]
     [SerializeField] private Slider healthSlider;
 
+    [Header("Indicador de interaccion") ]
+    [SerializeField] private GameObject interactionPromptPanel;
+    [SerializeField] private TMP_Text interactionPromptText;
+
     [Header("Panel de inventario")]
     [SerializeField] private GameObject inventoryPanel;
     [SerializeField] private Button closeInventoryButton;
@@ -36,18 +42,55 @@ public class UIManager : MonoBehaviour
     [Header("Catalogo de objetos")]
     [SerializeField] private InventoryItemDefinition[] itemDefinitions;
 
+    [Header("Paneles de estado")]
+    [SerializeField] private GameObject pausePanel;
+    [SerializeField] private GameObject victoryPanel;
+    [SerializeField] private GameObject defeatPanel;
+
+    [Header("Botones de pausa")]
+    [SerializeField] private Button resumeButton;
+    [SerializeField] private Button restartButton;
+    [SerializeField] private Button pauseMainMenuButton;
+
+    [Header("Botones de victoria")]
+    [SerializeField] private Button victoryRestartButton;
+    [SerializeField] private Button victoryMenuButton;
+
+    [Header("Botones de derrota")]
+    [SerializeField] private Button retryButton;
+    [SerializeField] private Button defeatMenuButton;
+
+    [Header("Escenas")]
+    [SerializeField] private string menuSceneName = "Menu";
+
     private GameManager gameManager;
     private int selectedItemIndex = -1;
 
     public bool IsInventoryOpen => inventoryPanel != null && inventoryPanel.activeSelf;
+    public bool IsPauseOpen => pausePanel != null && pausePanel.activeSelf;
+    public bool IsEndPanelOpen =>
+        (victoryPanel != null && victoryPanel.activeSelf) ||
+        (defeatPanel != null && defeatPanel.activeSelf);
 
     private void Start()
     {
-        if (inventoryPanel != null)
-            inventoryPanel.SetActive(false);
+        // Evita heredar un Time.timeScale de 0 al cargar otra escena.
+        Time.timeScale = 1f;
 
-        if (closeInventoryButton != null)
-            closeInventoryButton.onClick.AddListener(CloseInventory);
+        SetPanelActive(inventoryPanel, false);
+        SetPanelActive(pausePanel, false);
+        SetPanelActive(victoryPanel, false);
+        SetPanelActive(defeatPanel, false);
+        HideInteractionPrompt();
+
+        BindButton(closeInventoryButton, CloseInventory);
+        BindButton(resumeButton, ResumeGame);
+        BindButton(restartButton, RestartGame);
+        BindButton(pauseMainMenuButton, ReturnToMenuFromPause);
+        BindButton(victoryRestartButton, RestartGame);
+        BindButton(victoryMenuButton, ReturnToMenu);
+        BindButton(retryButton, RestartGame);
+        BindButton(defeatMenuButton, ReturnToMenu);
 
         InitializeInventorySlots();
         ClearSelectedItem();
@@ -61,10 +104,14 @@ public class UIManager : MonoBehaviour
 
         gameManager.InventoryChanged += RefreshInventory;
         gameManager.HealthChanged += RefreshHealth;
+        gameManager.PlayerDefeated += HandlePlayerDefeated;
 
         RefreshInventory();
         RefreshHealth(gameManager.CurrentHealth, gameManager.MaxHealth);
-        SetObjective("Encuentra una tarjeta de acceso.");
+
+        // No sobrescribe el objetivo si otro sistema ya lo actualizó después.
+        if (objectiveText != null && string.IsNullOrWhiteSpace(objectiveText.text))
+            SetObjective("Encuentra una tarjeta de acceso.");
     }
 
     private void OnDestroy()
@@ -73,11 +120,40 @@ public class UIManager : MonoBehaviour
         {
             gameManager.InventoryChanged -= RefreshInventory;
             gameManager.HealthChanged -= RefreshHealth;
+            gameManager.PlayerDefeated -= HandlePlayerDefeated;
         }
 
-        if (closeInventoryButton != null)
-            closeInventoryButton.onClick.RemoveListener(CloseInventory);
+        UnbindButton(closeInventoryButton, CloseInventory);
+        UnbindButton(resumeButton, ResumeGame);
+        UnbindButton(restartButton, RestartGame);
+        UnbindButton(pauseMainMenuButton, ReturnToMenuFromPause);
+        UnbindButton(victoryRestartButton, RestartGame);
+        UnbindButton(victoryMenuButton, ReturnToMenu);
+        UnbindButton(retryButton, RestartGame);
+        UnbindButton(defeatMenuButton, ReturnToMenu);
     }
+
+    private void BindButton(Button button, UnityAction action)
+    {
+        if (button != null)
+            button.onClick.AddListener(action);
+    }
+
+    private void UnbindButton(Button button, UnityAction action)
+    {
+        if (button != null)
+            button.onClick.RemoveListener(action);
+    }
+
+    private void SetPanelActive(GameObject panel, bool active)
+    {
+        if (panel != null)
+            panel.SetActive(active);
+    }
+
+    // =====================================================
+    // INVENTARIO
+    // =====================================================
 
     private void InitializeInventorySlots()
     {
@@ -97,11 +173,17 @@ public class UIManager : MonoBehaviour
 
     public void ToggleInventory()
     {
+        if (IsPauseOpen || IsEndPanelOpen)
+            return;
+
         SetInventoryOpen(!IsInventoryOpen);
     }
 
     public void OpenInventory()
     {
+        if (IsPauseOpen || IsEndPanelOpen)
+            return;
+
         SetInventoryOpen(true);
     }
 
@@ -119,8 +201,10 @@ public class UIManager : MonoBehaviour
         }
 
         inventoryPanel.SetActive(open);
+
         if (open)
         {
+            HideInteractionPrompt();
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
             RefreshInventory();
@@ -128,17 +212,11 @@ public class UIManager : MonoBehaviour
             if (gameManager != null && gameManager.Inventory.Count > 0 && selectedItemIndex < 0)
                 SelectInventoryItem(0);
         }
-        else
+        else if (!IsPauseOpen && !IsEndPanelOpen)
         {
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
         }
-    }
-
-    public void SetObjective(string message)
-    {
-        if (objectiveText != null)
-            objectiveText.text = "OBJETIVO: " + message;
     }
 
     private void RefreshInventory()
@@ -250,6 +328,161 @@ public class UIManager : MonoBehaviour
 
         if (selectedItemDescription != null)
             selectedItemDescription.text = "Selecciona un objeto de tu inventario para consultar su informacion y utilidad.";
+    }
+
+    // =====================================================
+    // INDICADOR DE INTERACCION
+    // =====================================================
+
+    public void ShowInteractionPrompt(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message) ||
+            interactionPromptPanel == null ||
+            interactionPromptText == null)
+        {
+            HideInteractionPrompt();
+            return;
+        }
+
+        if (IsPauseOpen || IsInventoryOpen || IsEndPanelOpen || Time.timeScale <= 0f)
+        {
+            HideInteractionPrompt();
+            return;
+        }
+
+        if (interactionPromptText.text != message)
+            interactionPromptText.text = message;
+
+        if (!interactionPromptPanel.activeSelf)
+            interactionPromptPanel.SetActive(true);
+    }
+
+    public void HideInteractionPrompt()
+    {
+        if (interactionPromptPanel != null && interactionPromptPanel.activeSelf)
+            interactionPromptPanel.SetActive(false);
+    }
+
+    // =====================================================
+    // PAUSA
+    // =====================================================
+
+    public void TogglePause()
+    {
+        if (IsEndPanelOpen || pausePanel == null)
+            return;
+
+        if (IsPauseOpen)
+            ResumeGame();
+        else
+            OpenPause();
+    }
+
+    public void OpenPause()
+    {
+        if (pausePanel == null || IsEndPanelOpen)
+            return;
+
+        SetPanelActive(inventoryPanel, false);
+        HideInteractionPrompt();
+        pausePanel.SetActive(true);
+        Time.timeScale = 0f;
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+    }
+
+    public void ResumeGame()
+    {
+        SetPanelActive(pausePanel, false);
+        Time.timeScale = 1f;
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+    }
+
+    // =====================================================
+    // VICTORIA Y DERROTA
+    // =====================================================
+
+    public void ShowVictory()
+    {
+        HideInteractionPrompt();
+        SetPanelActive(inventoryPanel, false);
+        SetPanelActive(pausePanel, false);
+        SetPanelActive(defeatPanel, false);
+        SetPanelActive(victoryPanel, true);
+        FreezeForEndPanel();
+    }
+
+    public void ShowDefeat()
+    {
+        HideInteractionPrompt();
+        SetPanelActive(inventoryPanel, false);
+        SetPanelActive(pausePanel, false);
+        SetPanelActive(victoryPanel, false);
+        SetPanelActive(defeatPanel, true);
+        FreezeForEndPanel();
+    }
+
+    private void HandlePlayerDefeated()
+    {
+        ShowDefeat();
+    }
+
+    private void FreezeForEndPanel()
+    {
+        Time.timeScale = 0f;
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+    }
+
+    // =====================================================
+    // ACCIONES DE LOS BOTONES
+    // =====================================================
+
+    public void RestartGame()
+    {
+        Time.timeScale = 1f;
+
+        if (GameManager.Instance == null)
+        {
+            Debug.LogError("No existe GameManager para reiniciar la partida.");
+            return;
+        }
+
+        GameManager.Instance.StartNewGame();
+    }
+
+    public void ReturnToMenuFromPause()
+    {
+        Time.timeScale = 1f;
+
+        if (GameManager.Instance == null)
+        {
+            Debug.LogError("No existe GameManager para guardar y volver al menu.");
+            SceneManager.LoadScene(menuSceneName);
+            return;
+        }
+
+        if (GameManager.Instance.Saves != null)
+            GameManager.Instance.Saves.SaveGame();
+
+        GameManager.Instance.ChangeScene(menuSceneName);
+    }
+
+    public void ReturnToMenu()
+    {
+        Time.timeScale = 1f;
+
+        if (GameManager.Instance != null)
+            GameManager.Instance.ChangeScene(menuSceneName);
+        else
+            SceneManager.LoadScene(menuSceneName);
+    }
+
+    public void SetObjective(string message)
+    {
+        if (objectiveText != null)
+            objectiveText.text = "OBJETIVO: " + message;
     }
 
     private void RefreshHealth(int currentHealth, int maxHealth)

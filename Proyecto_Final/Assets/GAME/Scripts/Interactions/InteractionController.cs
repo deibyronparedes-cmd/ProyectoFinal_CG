@@ -6,6 +6,7 @@ public class InteractionController : MonoBehaviour
     [SerializeField] private Transform player;
     [SerializeField] private Transform playerCamera;
     [SerializeField] private float interactionDistance = 1.5f;
+    [SerializeField] private UIManager uiManager;
 
     private Interactable currentInteractable;
     private int interactionMask;
@@ -18,9 +19,10 @@ public class InteractionController : MonoBehaviour
         if (playerCamera == null && Camera.main != null)
             playerCamera = Camera.main.transform;
 
-   
-        int playerLayer = LayerMask.NameToLayer("Player");
+        if (uiManager == null)
+            uiManager = FindFirstObjectByType<UIManager>();
 
+        int playerLayer = LayerMask.NameToLayer("Player");
         interactionMask = playerLayer >= 0
             ? ~(1 << playerLayer)
             : Physics.DefaultRaycastLayers;
@@ -28,21 +30,27 @@ public class InteractionController : MonoBehaviour
 
     private void Update()
     {
+        if (uiManager == null)
+            uiManager = FindFirstObjectByType<UIManager>();
+
+        // No mostrar indicadores ni permitir interacciones con el juego pausado o cursor libre.
+        if (Time.timeScale <= 0f || Cursor.lockState != CursorLockMode.Locked)
+        {
+            ChangeCurrentInteractable(null);
+            return;
+        }
+
         DetectInteractable();
 
         if (currentInteractable == null)
             return;
 
-        if (Cursor.lockState != CursorLockMode.Locked)
-            return;
-
-        if (Input.GetMouseButtonDown(0) ||
-            Input.GetKeyDown(KeyCode.E))
+        if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.E))
         {
-            Debug.Log(
-                "Interactuando con: " + currentInteractable.gameObject.name
-            );
+            if (!currentInteractable.CanInteract)
+                return;
 
+            Debug.Log("Interactuando con: " + currentInteractable.gameObject.name);
             currentInteractable.Interact();
         }
     }
@@ -51,26 +59,26 @@ public class InteractionController : MonoBehaviour
     {
         if (playerCamera == null || player == null)
         {
-            currentInteractable = null;
+            ChangeCurrentInteractable(null);
             return;
         }
 
-
-        Vector3 rayOrigin =
-            player.position + Vector3.up * 0.5f;
-
+        // Conservamos el origen y la direccion horizontal del sistema anterior
+        // para no alterar el comportamiento de deteccion que ya estaba probado.
+        Vector3 rayOrigin = player.position + Vector3.up * 0.5f;
         Vector3 rayDirection = playerCamera.forward;
         rayDirection.y = 0f;
 
         if (rayDirection.sqrMagnitude < 0.001f)
         {
-            currentInteractable = null;
+            ChangeCurrentInteractable(null);
             return;
         }
 
         rayDirection.Normalize();
-
         Ray ray = new Ray(rayOrigin, rayDirection);
+
+        Interactable detected = null;
 
         if (Physics.Raycast(
             ray,
@@ -79,18 +87,51 @@ public class InteractionController : MonoBehaviour
             interactionMask,
             QueryTriggerInteraction.Ignore))
         {
-            currentInteractable =
-                hit.collider.GetComponentInParent<Interactable>();
+            detected = hit.collider.GetComponentInParent<Interactable>();
+            if (detected != null && !detected.CanBeFocused)
+                detected = null;
         }
-        else
-        {
-            currentInteractable = null;
-        }
+
+        ChangeCurrentInteractable(detected);
+
+        if (currentInteractable != null && uiManager != null)
+            uiManager.ShowInteractionPrompt(currentInteractable.GetInteractionPrompt());
 
         Debug.DrawRay(
             rayOrigin,
             rayDirection * interactionDistance,
-            currentInteractable != null ? Color.green : Color.red
+            currentInteractable != null ? Color.cyan : Color.red
         );
+    }
+
+    private void ChangeCurrentInteractable(Interactable newInteractable)
+    {
+        if (currentInteractable == newInteractable)
+        {
+            if (newInteractable == null && uiManager != null)
+                uiManager.HideInteractionPrompt();
+            return;
+        }
+
+        if (currentInteractable != null)
+            currentInteractable.SetFocused(false);
+
+        currentInteractable = newInteractable;
+
+        if (currentInteractable != null)
+        {
+            currentInteractable.SetFocused(true);
+            if (uiManager != null)
+                uiManager.ShowInteractionPrompt(currentInteractable.GetInteractionPrompt());
+        }
+        else if (uiManager != null)
+        {
+            uiManager.HideInteractionPrompt();
+        }
+    }
+
+    private void OnDisable()
+    {
+        ChangeCurrentInteractable(null);
     }
 }
