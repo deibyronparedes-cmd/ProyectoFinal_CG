@@ -1,8 +1,9 @@
 {
-    "sceneName": "Laboratorio",
-    "currentHealth": 90,
+    "sceneName": "SalaControl",
+    "currentHealth": 70,
     "inventory": [
-        "KEYCARD_RECEPCION"
+        "KEYCARD_RECEPCION",
+        "FUSIBLE_LABORATORIO"
     ],
     "collectedPickupIds": [
         "PICKUP_KEYCARD_RECEPCION_01",
@@ -11,6 +12,10 @@
     "terminals": [
         {
             "terminalId": "TERMINAL_RECEPCION",
+            "activated": true
+        },
+        {
+            "terminalId": "TERMINAL_LABORATORIO",
             "activated": true
         }
     ]
