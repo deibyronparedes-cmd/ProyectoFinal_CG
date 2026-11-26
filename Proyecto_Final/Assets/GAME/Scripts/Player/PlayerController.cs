@@ -14,9 +14,11 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float minPitch = -15f;
     [SerializeField] private float maxPitch = 60f;
 
+    [Header("Interfaz")]
+    [SerializeField] private UIManager uiManager;
+
     private CharacterController controller;
     private Animator animator;
-
     private float verticalVelocity;
     private float yaw;
     private float pitch = 12f;
@@ -24,20 +26,16 @@ public class PlayerController : MonoBehaviour
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
-
         animator = GetComponentInChildren<Animator>();
 
         if (cameraTarget == null)
-        {
             cameraTarget = transform.Find("CameraTarget");
-        }
 
         if (cameraTarget == null)
-        {
-            Debug.LogError(
-                "No se encontro CameraTarget dentro de Player."
-            );
-        }
+            Debug.LogError("No se encontro CameraTarget dentro de Player.");
+
+        if (uiManager == null)
+            uiManager = FindFirstObjectByType<UIManager>();
     }
 
     private void Start()
@@ -47,7 +45,6 @@ public class PlayerController : MonoBehaviour
         if (cameraTarget != null)
         {
             pitch = cameraTarget.localEulerAngles.x;
-
             if (pitch > 180f)
                 pitch -= 360f;
         }
@@ -57,12 +54,28 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
+        // TAB solo funciona durante la partida, no en el menu principal.
+        if (uiManager != null && Input.GetKeyDown(KeyCode.Tab))
+            uiManager.ToggleInventory();
+
+        // Mientras el inventario esta abierto, el cursor queda libre,
+        // no se mueve la camara y el jugador no puede caminar.
+        if (uiManager != null && uiManager.IsInventoryOpen)
+        {
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                uiManager.CloseInventory();
+                return;
+            }
+
+            HandleMovement(); // Mantiene la gravedad; sin cursor bloqueado no hay movimiento horizontal.
+            return;           // Evita que un clic sobre un slot vuelva a bloquear el cursor.
+        }
+
         HandleCursor();
 
         if (Cursor.lockState == CursorLockMode.Locked)
-        {
             HandleCameraRotation();
-        }
 
         HandleMovement();
     }
@@ -76,24 +89,12 @@ public class PlayerController : MonoBehaviour
         float mouseY = Input.GetAxis("Mouse Y");
 
         yaw += mouseX * mouseSensitivity;
+        transform.rotation = Quaternion.Euler(0f, yaw, 0f);
 
-        transform.rotation = Quaternion.Euler(
-            0f,
-            yaw,
-            0f
-        );
         pitch -= mouseY * mouseSensitivity;
-
-        pitch = Mathf.Clamp(
-            pitch,
-            minPitch,
-            maxPitch
-        );
-
-        cameraTarget.localRotation =
-            Quaternion.Euler(pitch, 0f, 0f);
+        pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
+        cameraTarget.localRotation = Quaternion.Euler(pitch, 0f, 0f);
     }
-
 
     private void HandleMovement()
     {
@@ -106,56 +107,29 @@ public class PlayerController : MonoBehaviour
             vertical = Input.GetAxisRaw("Vertical");
         }
 
-        Vector3 direction =
-            transform.forward * vertical +
-            transform.right * horizontal;
-
-        direction = Vector3.ClampMagnitude(
-            direction,
-            1f
-        );
+        Vector3 direction = transform.forward * vertical + transform.right * horizontal;
+        direction = Vector3.ClampMagnitude(direction, 1f);
 
         bool isMoving = direction.sqrMagnitude > 0.01f;
-
         bool isRunning = isMoving &&
-            (Input.GetKey(KeyCode.LeftShift) ||
-             Input.GetKey(KeyCode.RightShift));
+            (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift));
 
-        float currentSpeed = isRunning
-            ? runSpeed
-            : moveSpeed;
+        float currentSpeed = isRunning ? runSpeed : moveSpeed;
 
         if (animator != null)
         {
-            float animationSpeed = 0f;
-
-            if (isMoving)
-            {
-                animationSpeed = isRunning ? 1f : 0.5f;
-            }
-
-            animator.SetFloat(
-                "Speed",
-                animationSpeed,
-                0.1f,
-                Time.deltaTime
-            );
+            float animationSpeed = isMoving ? (isRunning ? 1f : 0.5f) : 0f;
+            animator.SetFloat("Speed", animationSpeed, 0.1f, Time.deltaTime);
         }
 
         if (controller.isGrounded && verticalVelocity < 0f)
-        {
             verticalVelocity = -2f;
-        }
 
         verticalVelocity += gravity * Time.deltaTime;
 
         Vector3 movement = direction * currentSpeed;
-
         movement.y = verticalVelocity;
-
-        controller.Move(
-            movement * Time.deltaTime
-        );
+        controller.Move(movement * Time.deltaTime);
     }
 
     private void HandleCursor()
@@ -166,11 +140,8 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        if (Cursor.lockState != CursorLockMode.Locked &&
-            Input.GetMouseButtonDown(0))
-        {
+        if (Cursor.lockState != CursorLockMode.Locked && Input.GetMouseButtonDown(0))
             LockCursor();
-        }
     }
 
     private void LockCursor()
