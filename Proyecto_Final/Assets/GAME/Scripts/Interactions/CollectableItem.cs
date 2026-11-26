@@ -4,14 +4,24 @@ public class CollectableItem : Interactable
 {
     [Header("Identificacion")]
     [SerializeField] private string itemId = "KEYCARD_RECEPCION";
+    [SerializeField] private string pickupId = "PICKUP_KEYCARD_RECEPCION_01";
 
-    private bool collected = false;
+    [Header("Objetivo posterior (opcional)")]
+    [TextArea(1, 3)]
+    [SerializeField] private string objectiveAfterCollection =
+        "Activa el terminal de seguridad.";
+
+    private bool collected;
 
     private void Start()
     {
-        // Si el objeto ya estaba guardado en el inventario,
-        // no debe volver a aparecer al cargar la escena.
-        if (GameManager.Instance != null && GameManager.Instance.HasItem(itemId))
+        GameManager manager = GameManager.Instance;
+        if (manager == null)
+            return;
+
+        // Compatible con guardados antiguos: si el objeto ya esta en el
+        // inventario, tampoco se vuelve a mostrar en el escenario.
+        if (manager.HasCollectedPickup(pickupId) || manager.HasItem(itemId))
         {
             collected = true;
             gameObject.SetActive(false);
@@ -23,26 +33,28 @@ public class CollectableItem : Interactable
         if (collected)
             return;
 
-        if (GameManager.Instance == null)
+        GameManager manager = GameManager.Instance;
+        if (manager == null)
         {
             Debug.LogError("No existe un GameManager activo.");
             return;
         }
 
-        if (GameManager.Instance.AddItem(itemId))
+        if (!manager.AddItem(itemId, pickupId))
+            return;
+
+        base.Interact();
+        collected = true;
+
+        Debug.Log("Objeto recogido: " + itemId);
+
+        if (!string.IsNullOrWhiteSpace(objectiveAfterCollection))
         {
-            base.Interact();
-            collected = true;
-
-            Debug.Log("Tarjeta de acceso recogida.");
-
             UIManager ui = FindFirstObjectByType<UIManager>();
             if (ui != null)
-            {
-                ui.SetObjective("Activa el terminal de seguridad.");
-            }
-
-            gameObject.SetActive(false);
+                ui.SetObjective(objectiveAfterCollection);
         }
+
+        gameObject.SetActive(false);
     }
 }

@@ -33,7 +33,6 @@ public class InteractionController : MonoBehaviour
         if (uiManager == null)
             uiManager = FindFirstObjectByType<UIManager>();
 
-        // No mostrar indicadores ni permitir interacciones con el juego pausado o cursor libre.
         if (Time.timeScale <= 0f || Cursor.lockState != CursorLockMode.Locked)
         {
             ChangeCurrentInteractable(null);
@@ -55,6 +54,7 @@ public class InteractionController : MonoBehaviour
         }
     }
 
+
     private void DetectInteractable()
     {
         if (playerCamera == null || player == null)
@@ -63,11 +63,8 @@ public class InteractionController : MonoBehaviour
             return;
         }
 
-        // Conservamos el origen y la direccion horizontal del sistema anterior
-        // para no alterar el comportamiento de deteccion que ya estaba probado.
-        Vector3 rayOrigin = player.position + Vector3.up * 0.5f;
+        Vector3 rayOrigin = playerCamera.position;
         Vector3 rayDirection = playerCamera.forward;
-        rayDirection.y = 0f;
 
         if (rayDirection.sqrMagnitude < 0.001f)
         {
@@ -76,6 +73,7 @@ public class InteractionController : MonoBehaviour
         }
 
         rayDirection.Normalize();
+
         Ray ray = new Ray(rayOrigin, rayDirection);
 
         Interactable detected = null;
@@ -88,6 +86,7 @@ public class InteractionController : MonoBehaviour
             QueryTriggerInteraction.Ignore))
         {
             detected = hit.collider.GetComponentInParent<Interactable>();
+
             if (detected != null && !detected.CanBeFocused)
                 detected = null;
         }
@@ -95,7 +94,11 @@ public class InteractionController : MonoBehaviour
         ChangeCurrentInteractable(detected);
 
         if (currentInteractable != null && uiManager != null)
-            uiManager.ShowInteractionPrompt(currentInteractable.GetInteractionPrompt());
+        {
+            uiManager.ShowInteractionPrompt(
+                currentInteractable.GetInteractionPrompt()
+            );
+        }
 
         Debug.DrawRay(
             rayOrigin,

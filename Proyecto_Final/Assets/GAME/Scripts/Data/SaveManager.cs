@@ -56,6 +56,10 @@ public class SaveManager : MonoBehaviour
                     manager.Inventory
                 ),
 
+                collectedPickupIds = new System.Collections.Generic.List<string>(
+                    manager.CollectedPickupIds
+                ),
+
                 terminals = manager.GetTerminalSaveData()
             };
 
