@@ -10,8 +10,10 @@ public class GameManager : MonoBehaviour
 
     [Header("Inventario")]
     private List<string> inventory = new List<string>();
+    private List<string> collectedPickupIds = new List<string>();
 
     public IReadOnlyList<string> Inventory => inventory;
+    public IReadOnlyList<string> CollectedPickupIds => collectedPickupIds;
 
     public event Action InventoryChanged;
 
@@ -77,7 +79,70 @@ public class GameManager : MonoBehaviour
 
     public bool HasItem(string itemId)
     {
-        return inventory.Contains(itemId);
+        return !string.IsNullOrWhiteSpace(itemId) && inventory.Contains(itemId);
+    }
+
+    // Registra un objeto recogido y el identificador unico de su punto en el mundo.
+    // El pickupId permite que un consumible no reaparezca al cargar una partida
+    // despues de haber sido utilizado.
+    public bool AddItem(string itemId, string pickupId)
+    {
+        if (string.IsNullOrWhiteSpace(itemId))
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(pickupId) &&
+            collectedPickupIds.Contains(pickupId))
+        {
+            Debug.Log("Este punto de recogida ya fue utilizado: " + pickupId);
+            return false;
+        }
+
+        if (inventory.Contains(itemId))
+        {
+            Debug.Log("Este objeto ya esta en el inventario: " + itemId);
+            return false;
+        }
+
+        inventory.Add(itemId);
+
+        if (!string.IsNullOrWhiteSpace(pickupId))
+            collectedPickupIds.Add(pickupId);
+
+        Debug.Log("Objeto agregado: " + itemId);
+        InventoryChanged?.Invoke();
+        return true;
+    }
+
+    public bool HasCollectedPickup(string pickupId)
+    {
+        return !string.IsNullOrWhiteSpace(pickupId) &&
+               collectedPickupIds.Contains(pickupId);
+    }
+
+    // Consume un botiquin y restaura salud en una sola operacion.
+    // No consume el objeto cuando la salud ya esta al maximo.
+    public bool TryConsumeHealingItem(string itemId, int healingAmount)
+    {
+        if (string.IsNullOrWhiteSpace(itemId) || healingAmount <= 0)
+            return false;
+
+        if (currentHealth <= 0 || currentHealth >= maxHealth)
+            return false;
+
+        int itemIndex = inventory.IndexOf(itemId);
+        if (itemIndex < 0)
+            return false;
+
+        inventory.RemoveAt(itemIndex);
+        int previousHealth = currentHealth;
+        currentHealth = Mathf.Min(maxHealth, currentHealth + healingAmount);
+
+        InventoryChanged?.Invoke();
+        HealthChanged?.Invoke(currentHealth, maxHealth);
+
+        Debug.Log("Objeto consumido: " + itemId + ". Salud: " +
+                  previousHealth + " -> " + currentHealth);
+        return true;
     }
 
     // =====================================
@@ -205,6 +270,21 @@ public class GameManager : MonoBehaviour
             }
         }
 
+        // Reconstruir puntos de recogida ya utilizados.
+        // El null-check mantiene compatibilidad con archivos JSON anteriores.
+        collectedPickupIds.Clear();
+        if (data.collectedPickupIds != null)
+        {
+            foreach (string pickupId in data.collectedPickupIds)
+            {
+                if (!string.IsNullOrWhiteSpace(pickupId) &&
+                    !collectedPickupIds.Contains(pickupId))
+                {
+                    collectedPickupIds.Add(pickupId);
+                }
+            }
+        }
+
         // Reconstruir Dictionary
         terminalStates.Clear();
 
@@ -239,6 +319,7 @@ public class GameManager : MonoBehaviour
     public void StartNewGame()
     {
         inventory.Clear();
+        collectedPickupIds.Clear();
 
         terminalStates.Clear();
 

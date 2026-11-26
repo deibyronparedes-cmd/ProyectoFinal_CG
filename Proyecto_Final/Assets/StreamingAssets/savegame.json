@@ -1,8 +1,12 @@
 {
     "sceneName": "Laboratorio",
-    "currentHealth": 100,
+    "currentHealth": 90,
     "inventory": [
         "KEYCARD_RECEPCION"
+    ],
+    "collectedPickupIds": [
+        "PICKUP_KEYCARD_RECEPCION_01",
+        "PICKUP_BOTIQUIN_RECEPCION_01"
     ],
     "terminals": [
         {

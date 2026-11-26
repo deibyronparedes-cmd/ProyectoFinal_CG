@@ -12,6 +12,10 @@ public class InventoryItemDefinition
     public string displayName;
     [TextArea(2, 5)] public string description;
     public Sprite icon;
+
+    [Header("Uso del objeto")]
+    [Min(0)] public int healingAmount;
+    public string useButtonLabel = "USAR";
 }
 
 public class UIManager : MonoBehaviour
@@ -38,6 +42,10 @@ public class UIManager : MonoBehaviour
     [SerializeField] private Image selectedItemIcon;
     [SerializeField] private TMP_Text selectedItemName;
     [SerializeField] private TMP_Text selectedItemDescription;
+
+    [Header("Accion del objeto seleccionado")]
+    [SerializeField] private Button selectedItemUseButton;
+    [SerializeField] private TMP_Text selectedItemUseButtonText;
 
     [Header("Catalogo de objetos")]
     [SerializeField] private InventoryItemDefinition[] itemDefinitions;
@@ -84,6 +92,7 @@ public class UIManager : MonoBehaviour
         HideInteractionPrompt();
 
         BindButton(closeInventoryButton, CloseInventory);
+        BindButton(selectedItemUseButton, UseSelectedItem);
         BindButton(resumeButton, ResumeGame);
         BindButton(restartButton, RestartGame);
         BindButton(pauseMainMenuButton, ReturnToMenuFromPause);
@@ -124,6 +133,7 @@ public class UIManager : MonoBehaviour
         }
 
         UnbindButton(closeInventoryButton, CloseInventory);
+        UnbindButton(selectedItemUseButton, UseSelectedItem);
         UnbindButton(resumeButton, ResumeGame);
         UnbindButton(restartButton, RestartGame);
         UnbindButton(pauseMainMenuButton, ReturnToMenuFromPause);
@@ -298,6 +308,74 @@ public class UIManager : MonoBehaviour
             selectedItemIcon.sprite = icon;
             selectedItemIcon.enabled = icon != null;
         }
+
+        UpdateSelectedItemAction(definition);
+    }
+
+    private void UpdateSelectedItemAction(InventoryItemDefinition definition)
+    {
+        if (selectedItemUseButton == null)
+            return;
+
+        bool isHealingItem = definition != null && definition.healingAmount > 0;
+        selectedItemUseButton.gameObject.SetActive(isHealingItem);
+
+        if (!isHealingItem)
+            return;
+
+        bool canUse = gameManager != null &&
+                      gameManager.CurrentHealth > 0 &&
+                      gameManager.CurrentHealth < gameManager.MaxHealth;
+
+        selectedItemUseButton.interactable = canUse;
+
+        if (selectedItemUseButtonText != null)
+        {
+            if (gameManager == null || gameManager.CurrentHealth <= 0)
+                selectedItemUseButtonText.text = "NO DISPONIBLE";
+            else if (gameManager.CurrentHealth >= gameManager.MaxHealth)
+                selectedItemUseButtonText.text = "VIDA AL MAXIMO";
+            else
+                selectedItemUseButtonText.text = string.IsNullOrWhiteSpace(definition.useButtonLabel)
+                    ? "USAR"
+                    : definition.useButtonLabel;
+        }
+    }
+
+    public void UseSelectedItem()
+    {
+        if (gameManager == null || selectedItemIndex < 0 ||
+            selectedItemIndex >= gameManager.Inventory.Count)
+        {
+            return;
+        }
+
+        string itemId = gameManager.Inventory[selectedItemIndex];
+        InventoryItemDefinition definition = FindItemDefinition(itemId);
+
+        if (definition == null || definition.healingAmount <= 0)
+            return;
+
+        if (gameManager.CurrentHealth >= gameManager.MaxHealth)
+        {
+            UpdateSelectedItemAction(definition);
+            Debug.Log("La salud ya esta al maximo. El botiquin no se ha consumido.");
+            return;
+        }
+
+        int previousSelection = selectedItemIndex;
+        selectedItemIndex = -1;
+
+        if (!gameManager.TryConsumeHealingItem(itemId, definition.healingAmount))
+        {
+            selectedItemIndex = previousSelection;
+            SelectInventoryItem(previousSelection);
+            return;
+        }
+
+        ClearSelectedItem();
+        RefreshInventory();
+        Debug.Log("Botiquin utilizado correctamente.");
     }
 
     private InventoryItemDefinition FindItemDefinition(string itemId)
@@ -328,6 +406,12 @@ public class UIManager : MonoBehaviour
 
         if (selectedItemDescription != null)
             selectedItemDescription.text = "Selecciona un objeto de tu inventario para consultar su informacion y utilidad.";
+
+        if (selectedItemUseButton != null)
+        {
+            selectedItemUseButton.interactable = false;
+            selectedItemUseButton.gameObject.SetActive(false);
+        }
     }
 
     // =====================================================
@@ -494,6 +578,14 @@ public class UIManager : MonoBehaviour
         {
             healthSlider.maxValue = maxHealth;
             healthSlider.value = currentHealth;
+        }
+
+        if (gameManager != null && selectedItemIndex >= 0 &&
+            selectedItemIndex < gameManager.Inventory.Count)
+        {
+            InventoryItemDefinition definition =
+                FindItemDefinition(gameManager.Inventory[selectedItemIndex]);
+            UpdateSelectedItemAction(definition);
         }
     }
 }
