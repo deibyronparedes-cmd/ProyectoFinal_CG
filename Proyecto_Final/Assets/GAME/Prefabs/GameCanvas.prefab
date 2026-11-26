@@ -1447,10 +1447,10 @@ MonoBehaviour:
   m_text: "MOVIMIENTO:\n\nW, A, S, D:         Mover al personaje\nMOUSE:           
     Girar personaje y c\xE1mara\nSHIFT:               Correr\nESC:                 
     Liberar el cursor\n\n\nINTERACCI\xD3N:\n\nE:                               Interactuar\nCLIC
-    IZQUIERDO:     Interactuar\n\n\nDIN\xC1MICA DEL JUEGO:\n\nExplora las instalaciones
-    abandonadas, encuentra las tarjetas de acceso, activa los terminales y desbloquea
-    las puertas.\n\nEvita al personal de seguridad, utiliza los espacios del laboratorio
-    para ocultarte y conserva tu vida para completar los objetivos."
+    IZQUIERDO:     Interactuar\nTAB:                           Inventario\n\n\nDIN\xC1MICA
+    DEL JUEGO:\n\nExplora este laboratorio abandonado siguiendo las pistas para lograr
+    escapar, pero muy pendiente de tu alrededor, hay algo o alguien intentando que
+    no escapes..."
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -9970,8 +9970,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 105, y: 0}
-  m_SizeDelta: {x: 650, y: 65}
+  m_AnchoredPosition: {x: 75.699, y: 0}
+  m_SizeDelta: {x: 849.245, y: 65}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &637105089148640960
 CanvasRenderer:
