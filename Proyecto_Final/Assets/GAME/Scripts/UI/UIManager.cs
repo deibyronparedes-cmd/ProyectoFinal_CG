@@ -14,8 +14,8 @@ public class InventoryItemDefinition
     public Sprite icon;
 
     [Header("Uso del objeto")]
-    [Min(0)] public int healingAmount;
-    public string useButtonLabel = "USAR";
+    public bool isHealingItem;
+    [Min(1)] public int healingAmount = 20;
 }
 
 public class UIManager : MonoBehaviour
@@ -42,10 +42,8 @@ public class UIManager : MonoBehaviour
     [SerializeField] private Image selectedItemIcon;
     [SerializeField] private TMP_Text selectedItemName;
     [SerializeField] private TMP_Text selectedItemDescription;
-
-    [Header("Accion del objeto seleccionado")]
-    [SerializeField] private Button selectedItemUseButton;
-    [SerializeField] private TMP_Text selectedItemUseButtonText;
+    [SerializeField] private Button useSelectedItemButton;
+    [SerializeField] private TMP_Text inventoryFeedbackText;
 
     [Header("Catalogo de objetos")]
     [SerializeField] private InventoryItemDefinition[] itemDefinitions;
@@ -92,13 +90,13 @@ public class UIManager : MonoBehaviour
         HideInteractionPrompt();
 
         BindButton(closeInventoryButton, CloseInventory);
-        BindButton(selectedItemUseButton, UseSelectedItem);
+        BindButton(useSelectedItemButton, UseSelectedItem);
         BindButton(resumeButton, ResumeGame);
         BindButton(restartButton, RestartGame);
         BindButton(pauseMainMenuButton, ReturnToMenuFromPause);
         BindButton(victoryRestartButton, RestartGame);
         BindButton(victoryMenuButton, ReturnToMenu);
-        BindButton(retryButton, RestartGame);
+        BindButton(retryButton, RetryFromLastCheckpoint);
         BindButton(defeatMenuButton, ReturnToMenu);
 
         InitializeInventorySlots();
@@ -133,13 +131,13 @@ public class UIManager : MonoBehaviour
         }
 
         UnbindButton(closeInventoryButton, CloseInventory);
-        UnbindButton(selectedItemUseButton, UseSelectedItem);
+        UnbindButton(useSelectedItemButton, UseSelectedItem);
         UnbindButton(resumeButton, ResumeGame);
         UnbindButton(restartButton, RestartGame);
         UnbindButton(pauseMainMenuButton, ReturnToMenuFromPause);
         UnbindButton(victoryRestartButton, RestartGame);
         UnbindButton(victoryMenuButton, ReturnToMenu);
-        UnbindButton(retryButton, RestartGame);
+        UnbindButton(retryButton, RetryFromLastCheckpoint);
         UnbindButton(defeatMenuButton, ReturnToMenu);
     }
 
@@ -272,11 +270,21 @@ public class UIManager : MonoBehaviour
             }
         }
 
-        if (selectedItemIndex >= itemCount)
+        if (itemCount == 0)
         {
             selectedItemIndex = -1;
             ClearSelectedItem();
+            return;
         }
+
+        // Selecciona automáticamente el primer objeto al crear UIManager en una escena nueva.
+        // Si el objeto seleccionado fue consumido, selecciona un índice válido.
+        if (selectedItemIndex < 0)
+            selectedItemIndex = 0;
+        else if (selectedItemIndex >= itemCount)
+            selectedItemIndex = itemCount - 1;
+
+        SelectInventoryItem(selectedItemIndex);
     }
 
     private void SelectInventoryItem(int slotIndex)
@@ -307,75 +315,67 @@ public class UIManager : MonoBehaviour
             Sprite icon = definition != null ? definition.icon : null;
             selectedItemIcon.sprite = icon;
             selectedItemIcon.enabled = icon != null;
+            selectedItemIcon.preserveAspect = true;
         }
 
-        UpdateSelectedItemAction(definition);
+        UpdateUseItemButton(definition);
     }
 
-    private void UpdateSelectedItemAction(InventoryItemDefinition definition)
+    private void UpdateUseItemButton(InventoryItemDefinition definition)
     {
-        if (selectedItemUseButton == null)
+        if (useSelectedItemButton == null)
             return;
 
-        bool isHealingItem = definition != null && definition.healingAmount > 0;
-        selectedItemUseButton.gameObject.SetActive(isHealingItem);
+        bool isHealingItem = definition != null && definition.isHealingItem;
+        bool canHeal = gameManager != null && gameManager.CurrentHealth < gameManager.MaxHealth;
 
-        if (!isHealingItem)
-            return;
+        useSelectedItemButton.gameObject.SetActive(isHealingItem);
+        useSelectedItemButton.interactable = isHealingItem && canHeal;
 
-        bool canUse = gameManager != null &&
-                      gameManager.CurrentHealth > 0 &&
-                      gameManager.CurrentHealth < gameManager.MaxHealth;
-
-        selectedItemUseButton.interactable = canUse;
-
-        if (selectedItemUseButtonText != null)
-        {
-            if (gameManager == null || gameManager.CurrentHealth <= 0)
-                selectedItemUseButtonText.text = "NO DISPONIBLE";
-            else if (gameManager.CurrentHealth >= gameManager.MaxHealth)
-                selectedItemUseButtonText.text = "VIDA AL MAXIMO";
-            else
-                selectedItemUseButtonText.text = string.IsNullOrWhiteSpace(definition.useButtonLabel)
-                    ? "USAR"
-                    : definition.useButtonLabel;
-        }
+        TMP_Text buttonLabel = useSelectedItemButton.GetComponentInChildren<TMP_Text>(true);
+        if (buttonLabel != null)
+            buttonLabel.text = canHeal ? "USAR OBJETO" : "VIDA COMPLETA";
     }
 
+    /// <summary>Consume el objeto curativo seleccionado y actualiza el inventario y el HUD.</summary>
     public void UseSelectedItem()
     {
-        if (gameManager == null || selectedItemIndex < 0 ||
-            selectedItemIndex >= gameManager.Inventory.Count)
-        {
+        if (gameManager == null || selectedItemIndex < 0 || selectedItemIndex >= gameManager.Inventory.Count)
             return;
-        }
 
         string itemId = gameManager.Inventory[selectedItemIndex];
         InventoryItemDefinition definition = FindItemDefinition(itemId);
 
-        if (definition == null || definition.healingAmount <= 0)
+        if (definition == null || !definition.isHealingItem)
+        {
+            SetInventoryFeedback("Este objeto no se puede utilizar.");
             return;
+        }
 
         if (gameManager.CurrentHealth >= gameManager.MaxHealth)
         {
-            UpdateSelectedItemAction(definition);
-            Debug.Log("La salud ya esta al maximo. El botiquin no se ha consumido.");
+            SetInventoryFeedback("Tu vida ya está completa.");
+            UpdateUseItemButton(definition);
             return;
         }
 
-        int previousSelection = selectedItemIndex;
-        selectedItemIndex = -1;
-
-        if (!gameManager.TryConsumeHealingItem(itemId, definition.healingAmount))
+        bool consumed = gameManager.TryConsumeHealingItem(itemId, definition.healingAmount);
+        if (!consumed)
         {
-            selectedItemIndex = previousSelection;
-            SelectInventoryItem(previousSelection);
+            SetInventoryFeedback("No se pudo utilizar el objeto.");
             return;
         }
 
-        ClearSelectedItem();
-        RefreshInventory();
-        Debug.Log("Botiquin utilizado correctamente.");
+        SetInventoryFeedback("Botiquín utilizado: recuperaste " + definition.healingAmount + " puntos de vida.");
+        Debug.Log("Objeto curativo utilizado: " + itemId);
+    }
+
+    private void SetInventoryFeedback(string message)
+    {
+        if (inventoryFeedbackText != null)
+            inventoryFeedbackText.text = message;
+        else
+            Debug.Log(message);
     }
 
     private InventoryItemDefinition FindItemDefinition(string itemId)
@@ -407,10 +407,10 @@ public class UIManager : MonoBehaviour
         if (selectedItemDescription != null)
             selectedItemDescription.text = "Selecciona un objeto de tu inventario para consultar su informacion y utilidad.";
 
-        if (selectedItemUseButton != null)
+        if (useSelectedItemButton != null)
         {
-            selectedItemUseButton.interactable = false;
-            selectedItemUseButton.gameObject.SetActive(false);
+            useSelectedItemButton.gameObject.SetActive(false);
+            useSelectedItemButton.interactable = false;
         }
     }
 
@@ -523,6 +523,27 @@ public class UIManager : MonoBehaviour
     // ACCIONES DE LOS BOTONES
     // =====================================================
 
+
+    /// <summary>
+    /// El botón Reintentar de derrota carga el último guardado JSON.
+    /// RestartGame se conserva para los botones de reinicio manual de pausa/victoria.
+    /// </summary>
+    public void RetryFromLastCheckpoint()
+    {
+        Time.timeScale = 1f;
+
+        if (GameManager.Instance == null || GameManager.Instance.Saves == null)
+        {
+            Debug.LogError("No hay GameManager/SaveManager para recuperar el último punto de guardado.");
+            return;
+        }
+
+        if (!GameManager.Instance.Saves.LoadGame())
+        {
+            Debug.LogError("No se pudo recuperar el último guardado. No se inició una partida nueva para evitar perder el progreso.");
+        }
+    }
+
     public void RestartGame()
     {
         Time.timeScale = 1f;
@@ -571,6 +592,9 @@ public class UIManager : MonoBehaviour
 
     private void RefreshHealth(int currentHealth, int maxHealth)
     {
+        if (gameManager != null && selectedItemIndex >= 0 && selectedItemIndex < gameManager.Inventory.Count)
+            UpdateUseItemButton(FindItemDefinition(gameManager.Inventory[selectedItemIndex]));
+
         if (healthText != null)
             healthText.text = "Vida: " + currentHealth + " / " + maxHealth;
 
@@ -578,14 +602,6 @@ public class UIManager : MonoBehaviour
         {
             healthSlider.maxValue = maxHealth;
             healthSlider.value = currentHealth;
-        }
-
-        if (gameManager != null && selectedItemIndex >= 0 &&
-            selectedItemIndex < gameManager.Inventory.Count)
-        {
-            InventoryItemDefinition definition =
-                FindItemDefinition(gameManager.Inventory[selectedItemIndex]);
-            UpdateSelectedItemAction(definition);
         }
     }
 }
