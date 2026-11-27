@@ -1,15 +1,10 @@
 using UnityEngine;
-
 public class CollectableItem : Interactable
 {
-    [Header("Identificacion")]
+    [Header("Identificación")]
     [SerializeField] private string itemId = "KEYCARD_RECEPCION";
+    [SerializeField] private string objectiveAfterCollection = "";
     [SerializeField] private string pickupId = "PICKUP_KEYCARD_RECEPCION_01";
-
-    [Header("Objetivo posterior (opcional)")]
-    [TextArea(1, 3)]
-    [SerializeField] private string objectiveAfterCollection =
-        "Activa el terminal de seguridad.";
 
     private bool collected;
 
@@ -18,10 +13,7 @@ public class CollectableItem : Interactable
         GameManager manager = GameManager.Instance;
         if (manager == null)
             return;
-
-        // Compatible con guardados antiguos: si el objeto ya esta en el
-        // inventario, tampoco se vuelve a mostrar en el escenario.
-        if (manager.HasCollectedPickup(pickupId) || manager.HasItem(itemId))
+        if (manager.HasItem(itemId) || manager.HasCollectedPickup(pickupId))
         {
             collected = true;
             gameObject.SetActive(false);
@@ -36,23 +28,22 @@ public class CollectableItem : Interactable
         GameManager manager = GameManager.Instance;
         if (manager == null)
         {
-            Debug.LogError("No existe un GameManager activo.");
+            Debug.LogError("No existe un GameManager activo.", this);
             return;
         }
 
         if (!manager.AddItem(itemId, pickupId))
             return;
 
-        base.Interact();
         collected = true;
+        base.Interact();
 
-        Debug.Log("Objeto recogido: " + itemId);
+        UIManager ui = FindFirstObjectByType<UIManager>();
 
-        if (!string.IsNullOrWhiteSpace(objectiveAfterCollection))
+        if (ui != null &&
+            !string.IsNullOrWhiteSpace(objectiveAfterCollection))
         {
-            UIManager ui = FindFirstObjectByType<UIManager>();
-            if (ui != null)
-                ui.SetObjective(objectiveAfterCollection);
+            ui.SetObjective(objectiveAfterCollection);
         }
 
         gameObject.SetActive(false);

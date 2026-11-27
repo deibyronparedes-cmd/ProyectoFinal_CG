@@ -1,0 +1,35 @@
+{
+    "saveVersion": 2,
+    "sceneName": "SalaControl",
+    "checkpointId": "SalaControl",
+    "currentHealth": 90,
+    "inventory": [
+        "KEYCARD_RECEPCION",
+        "REGISTRO_INVESTIGACION",
+        "FUSIBLE_LABORATORIO",
+        "BOTIQUIN_LAB_20HP"
+    ],
+    "collectedPickupIds": [
+        "PICKUP_KEYCARD_RECEPCION_01",
+        "PICKUP_REGISTRO_INVESTIGACION_01",
+        "PICKUP_BOTIQUIN_LAB_01"
+    ],
+    "terminals": [
+        {
+            "terminalId": "TERMINAL_RECEPCION",
+            "activated": true
+        },
+        {
+            "terminalId": "TERMINAL_LABORATORIO",
+            "activated": true
+        }
+    ],
+    "stationQueue": [],
+    "stationHistoryStack": [],
+    "completedObjectives": [],
+    "statistics": {
+        "totalItemsCollected": 4,
+        "totalDamageTaken": 10,
+        "totalTerminalsActivated": 2
+    }
+}

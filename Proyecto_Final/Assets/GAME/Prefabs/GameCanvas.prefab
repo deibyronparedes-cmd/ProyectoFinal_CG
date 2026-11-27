@@ -1002,8 +1002,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -808.16046, y: -3}
-  m_SizeDelta: {x: 861.691, y: 34.637}
+  m_AnchoredPosition: {x: -798.78, y: -0.0001545}
+  m_SizeDelta: {x: 899.72, y: 65}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4886823525073398022
 CanvasRenderer:
@@ -1060,15 +1060,15 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 26
-  m_fontSizeBase: 26
+  m_fontSize: 20
+  m_fontSizeBase: 20
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 1
-  m_HorizontalAlignment: 1
-  m_VerticalAlignment: 256
+  m_HorizontalAlignment: 2
+  m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_characterHorizontalScale: 1
@@ -2498,22 +2498,59 @@ MonoBehaviour:
   selectedItemIcon: {fileID: 8775477373842897286}
   selectedItemName: {fileID: 3469175298682328214}
   selectedItemDescription: {fileID: 4599179937917315060}
-  selectedItemUseButton: {fileID: 3880539403545530813}
-  selectedItemUseButtonText: {fileID: 7040427647301398945}
+  useSelectedItemButton: {fileID: 3880539403545530813}
+  inventoryFeedbackText: {fileID: 0}
   itemDefinitions:
   - itemId: KEYCARD_RECEPCION
     displayName: Tarjeta de acceso
     description: "Credencial recuperada en Recepci\xF3n. Permite activar el terminal
       de seguridad."
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 74f49683bf4aa5e4381796834294bc6b, type: 3}
+    isHealingItem: 0
     healingAmount: 0
-    useButtonLabel: USAR
   - itemId: BOTIQUIN_20HP
     displayName: "Botiqu\xEDn de emergencia"
     description: Kit de primeros auxilios. Restaura hasta 20 puntos de salud al utilizarlo.
-    icon: {fileID: 21300000, guid: 29ec3f260e90b504398293845509b8e5, type: 3}
+    icon: {fileID: 21300000, guid: 363f087e002fa144ba6c165fd10999a6, type: 3}
+    isHealingItem: 1
     healingAmount: 20
-    useButtonLabel: USAR (+20 HP)
+  - itemId: BOTIQUIN_LAB_20HP
+    displayName: "Botiqu\xEDn de emergencia"
+    description: Kit de primeros auxilios. Restaura hasta 20 puntos de salud al utilizarlo.
+    icon: {fileID: 21300000, guid: 363f087e002fa144ba6c165fd10999a6, type: 3}
+    isHealingItem: 1
+    healingAmount: 20
+  - itemId: BOTIQUIN_CONTROL_01_20HP
+    displayName: "Botiqu\xEDn de emergencia"
+    description: Kit de primeros auxilios. Restaura hasta 20 puntos de salud al utilizarlo.
+    icon: {fileID: 21300000, guid: 363f087e002fa144ba6c165fd10999a6, type: 3}
+    isHealingItem: 1
+    healingAmount: 20
+  - itemId: BOTIQUIN_CONTROL_02_20HP
+    displayName: "Botiqu\xEDn de emergencia"
+    description: Kit de primeros auxilios. Restaura hasta 20 puntos de salud al utilizarlo.
+    icon: {fileID: 21300000, guid: 363f087e002fa144ba6c165fd10999a6, type: 3}
+    isHealingItem: 1
+    healingAmount: 20
+  - itemId: REGISTRO_INVESTIGACION
+    displayName: "Registro de investigaci\xF3n"
+    description: Recuperaste evidencias.
+    icon: {fileID: 21300000, guid: 733c772ec7b35b04f9948c45f47e2a82, type: 3}
+    isHealingItem: 0
+    healingAmount: 1
+  - itemId: REGISTRO_CONTENCION
+    displayName: "Registro de contenci\xF3n"
+    description: Recuperaste evidencias.
+    icon: {fileID: 21300000, guid: 0a4cf6c01d13d15489407fd30e76e29f, type: 3}
+    isHealingItem: 0
+    healingAmount: 1
+  - itemId: FUSIBLE_LABORATORIO
+    displayName: Fusible industrial
+    description: "Componente el\xE9ctrico recuperado en el laboratorio. Permite restablecer
+      la energ\xEDa y habilitar la salida hacia Sala de Control."
+    icon: {fileID: 21300000, guid: 61bb8924abde4ce4aaf5692634c1bf5d, type: 3}
+    isHealingItem: 0
+    healingAmount: 1
   pausePanel: {fileID: 2927476302522137210}
   victoryPanel: {fileID: 2054346888445286379}
   defeatPanel: {fileID: 791886651456108347}

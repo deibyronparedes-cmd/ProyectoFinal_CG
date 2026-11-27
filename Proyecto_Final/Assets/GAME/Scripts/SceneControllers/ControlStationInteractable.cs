@@ -1,8 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// Interactable station used by SalaControlController.
-/// The station advances only when it is the next one in the required sequence.
+/// Estación interactiva de SalaControl. La última estación completada puede deshacerse.
 /// </summary>
 public class ControlStationInteractable : Interactable
 {
@@ -12,10 +11,15 @@ public class ControlStationInteractable : Interactable
     [SerializeField] private string stationLabel = "Restablecer vigilancia";
     [SerializeField] private string prompt = "[E] ACTIVAR ESTACIÓN";
 
-    [Header("Feedback when used out of order")]
+    [Header("Feedback de secuencia incorrecta")]
     [SerializeField] private AudioClip deniedSound;
     [Range(0f, 1f)]
     [SerializeField] private float deniedSoundVolume = 0.8f;
+
+    [Header("Feedback al deshacer")]
+    [SerializeField] private AudioClip undoSound;
+    [Range(0f, 1f)]
+    [SerializeField] private float undoSoundVolume = 0.8f;
 
     private SalaControlController sceneController;
 
@@ -27,8 +31,13 @@ public class ControlStationInteractable : Interactable
     {
         get
         {
-            return GameManager.Instance == null
-                || !GameManager.Instance.IsTerminalActivated(terminalId);
+            if (GameManager.Instance == null)
+                return true;
+
+            if (!GameManager.Instance.IsTerminalActivated(terminalId))
+                return true;
+
+            return sceneController != null && sceneController.CanUndoStation(this);
         }
     }
 
@@ -36,8 +45,8 @@ public class ControlStationInteractable : Interactable
 
     public override string GetInteractionPrompt()
     {
-        if (!CanBeFocused)
-            return "SISTEMA ACTIVO";
+        if (GameManager.Instance != null && GameManager.Instance.IsTerminalActivated(terminalId))
+            return "[E] DESHACER ÚLTIMO PASO";
 
         return prompt;
     }
@@ -48,7 +57,6 @@ public class ControlStationInteractable : Interactable
         terminalId = id;
         stationIndex = index;
         stationLabel = label;
-
         prompt = "[E] " + label.ToUpperInvariant();
     }
 
@@ -64,20 +72,29 @@ public class ControlStationInteractable : Interactable
             return;
         }
 
-        bool activated = sceneController.TryActivateStation(this);
-        if (activated)
+        if (GameManager.Instance != null && GameManager.Instance.IsTerminalActivated(terminalId))
+        {
+            if (sceneController.TryUndoLastStation(this))
+            {
+                Debug.Log("Último paso deshecho: " + stationLabel, this);
+                PlayUndoFeedback();
+            }
+            return;
+        }
+
+        if (sceneController.TryActivateStation(this))
             base.Interact();
     }
 
     public void PlayDeniedFeedback()
     {
         if (deniedSound != null)
-        {
-            AudioSource.PlayClipAtPoint(
-                deniedSound,
-                transform.position,
-                deniedSoundVolume
-            );
-        }
+            AudioSource.PlayClipAtPoint(deniedSound, transform.position, deniedSoundVolume);
+    }
+
+    private void PlayUndoFeedback()
+    {
+        if (undoSound != null)
+            AudioSource.PlayClipAtPoint(undoSound, transform.position, undoSoundVolume);
     }
 }
